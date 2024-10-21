@@ -4,7 +4,7 @@ stages:
   - package
 
 package-qa:
-  image: docker:27.3.1
+  image: docker:20.10.7
   stage: package
   only:
     - master
@@ -13,7 +13,7 @@ package-qa:
     DOCKER_TLS_CERTDIR: '' # Disable TLS for Docker-in-Docker
     DOCKER_DRIVER: overlay2
   services:
-    - name: docker:27.3.1-dind # Docker-in-Docker service
+    - name: docker:20.10.7-dind # Docker-in-Docker service
       alias: docker # Required alias to match the DOCKER_HOST
   before_script:
     - docker-compose --version
