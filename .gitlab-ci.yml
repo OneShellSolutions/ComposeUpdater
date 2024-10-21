@@ -3,23 +3,12 @@
 stages:
   - package
 
-package-qa:
-  image: docker:20.10.7
+package:
+  image: docker:20.10.7-compose
   stage: package
-  only:
-    - master
-  variables:
-    DOCKER_DRIVER: overlay2
-    DOCKER_TLS_CERTDIR: '/certs'
   services:
     - name: docker:20.10.7-dind
-      command: ['--insecure-registry=docker.oneshell.in']
-  before_script:
-    - docker info
   script:
-    - echo $DOCKER_ONESHELL_PASSWORD > ~/password.txt
-    - cat ~/password.txt | docker login --username $DOCKER_ONESHELL_USER --password-stdin docker.oneshell.in
-    # Build the Docker image (Dockerfile should be in the correct directory)
+    - echo $DOCKER_ONESHELL_PASSWORD | docker login --username $DOCKER_ONESHELL_USER --password-stdin docker.oneshell.in
     - docker build -t docker.oneshell.in/library/compose-builder:latest .
-    # Push the Docker image to the registry
     - docker push docker.oneshell.in/library/compose-builder:latest

@@ -2,7 +2,8 @@
 FROM python:3.10-slim
 
 # Install necessary tools: git, curl, Docker, and Docker Compose
-RUN apt-get update && \
+RUN rm -f /etc/apt/apt.conf.d/docker-clean && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
     curl \
     git \
