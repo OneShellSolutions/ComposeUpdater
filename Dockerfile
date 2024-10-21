@@ -4,9 +4,8 @@ FROM python:3.10-slim as build
 # Set up environment variables to prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Disable APT hooks to avoid issues with Docker's default behavior
-RUN rm -f /etc/apt/apt.conf.d/docker-clean && \
-    echo 'APT::Update::Post-Invoke-Success { "echo"; };' > /etc/apt/apt.conf.d/no-cache-clean
+# Remove the problematic APT hook and prevent post-invoke script error
+RUN rm -f /etc/apt/apt.conf.d/docker-clean /etc/apt/apt.conf.d/no-cache-clean
 
 # Install curl, git, and docker dependencies without extra recommendations
 RUN apt-get update && apt-get install -y --no-install-recommends \
