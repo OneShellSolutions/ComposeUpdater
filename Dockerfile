@@ -4,17 +4,19 @@ FROM python:3.10-slim
 # Set environment variables to prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Disable APT hooks and avoid cache issues
+# Remove problematic APT hooks and disable cache cleaning
 RUN rm -f /etc/apt/apt.conf.d/docker-clean && \
     echo 'APT::Update::Post-Invoke-Success { "echo"; };' > /etc/apt/apt.conf.d/no-cache-clean
 
-# Install dependencies in smaller batches to avoid memory issues
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     curl \
     apt-transport-https \
-    ca-certificates && \
-    apt-get install -y gnupg lsb-release && \
-    apt-get install -y git && \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    git && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/*
 
 # Add Docker’s official GPG key and repository
