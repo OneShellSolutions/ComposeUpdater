@@ -1,8 +1,5 @@
 # @format
 
-stages:
-  - package
-
 package-qa:
   image: docker:20.10.7
   stage: package
@@ -11,11 +8,16 @@ package-qa:
   variables:
     DOCKER_DRIVER: overlay2
     DOCKER_TLS_CERTDIR: '/certs'
+    DOCKER_RAMDISK: '1' # Allows more flexible memory handling
   services:
     - name: docker:20.10.7-dind
       command: ['--insecure-registry=docker.oneshell.in']
   before_script:
     - docker info
+    # Install Docker Compose manually
+    - curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    - chmod +x /usr/local/bin/docker-compose
+    - docker-compose --version
   script:
     - echo $DOCKER_ONESHELL_PASSWORD | docker login --username $DOCKER_ONESHELL_USER --password-stdin docker.oneshell.in
     - docker build -t docker.oneshell.in/library/compose-builder:latest .
