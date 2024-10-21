@@ -4,7 +4,7 @@ stages:
   - package
 
 package-qa:
-  image: docker:20.10.7
+  image: docker:27.3.1
   stage: package
   only:
     - master
@@ -13,14 +13,9 @@ package-qa:
     DOCKER_TLS_CERTDIR: '' # Disable TLS for Docker-in-Docker
     DOCKER_DRIVER: overlay2
   services:
-    - name: docker:20.10.7-dind # Docker-in-Docker service
+    - name: docker:27.3.1-dind # Docker-in-Docker service
       alias: docker # Required alias to match the DOCKER_HOST
   before_script:
-    # Install curl
-    - apt-get update && apt-get install -y curl
-    # Download and install Docker Compose
-    - curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    - chmod +x /usr/local/bin/docker-compose
     - docker-compose --version
   script:
     # Login to the Docker registry
