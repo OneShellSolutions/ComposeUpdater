@@ -16,7 +16,6 @@ package-qa:
       command: ['--insecure-registry=docker.oneshell.in']
   before_script:
     - docker info
-    - docker-compose --version
   script:
     - echo $DOCKER_ONESHELL_PASSWORD | docker login --username $DOCKER_ONESHELL_USER --password-stdin docker.oneshell.in
     - docker build -t docker.oneshell.in/library/compose-builder:latest .
