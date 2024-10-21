@@ -2,7 +2,8 @@
 FROM python:3.10-slim
 
 # Install necessary tools: git, curl, Docker, and Docker Compose
-RUN apt-get update && \
+RUN rm -f /etc/apt/apt.conf.d/docker-clean && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
     curl \
     git \
@@ -22,17 +23,17 @@ RUN apt-get update && \
     chmod +x /usr/local/bin/docker-compose && \
     # Verify Docker Compose installation
     docker-compose --version && \
-    # Clean up
+    # Clean up to reduce image size
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install Flask and other Python packages
-RUN pip install flask docker gitpython
+RUN pip install --no-cache-dir flask docker gitpython
 
 # Set working directory
 WORKDIR /app
 
-# Copy the merged Python script into the container
+# Copy the Python application to the container
 COPY main.py /app/main.py
 
 # Expose port 5000
