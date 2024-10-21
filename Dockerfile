@@ -8,12 +8,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN rm -f /etc/apt/apt.conf.d/docker-clean && \
     echo 'APT::Update::Post-Invoke-Success { "echo"; };' > /etc/apt/apt.conf.d/no-cache-clean
 
-# Create a swap file to prevent memory issues during package installation
-RUN fallocate -l 2G /swapfile && \
-    chmod 600 /swapfile && \
-    mkswap /swapfile && \
-    swapon /swapfile
-
 # Install dependencies in smaller batches to avoid memory issues
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
@@ -36,9 +30,6 @@ RUN apt-get update && apt-get install -y docker.io && \
 
 # Install Python dependencies
 RUN pip install --no-cache-dir flask docker gitpython
-
-# Turn off swap and remove the swap file after installation
-RUN swapoff /swapfile && rm -f /swapfile
 
 # Set the working directory
 WORKDIR /app

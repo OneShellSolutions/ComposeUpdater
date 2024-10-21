@@ -6,6 +6,7 @@ stages:
 package-qa:
   image: docker:20.10.7
   stage: package
+  privileged: true
   only:
     - master
   variables:
@@ -17,7 +18,9 @@ package-qa:
   script:
     # Login to the Docker registry
     - echo $DOCKER_ONESHELL_PASSWORD | docker login --username $DOCKER_ONESHELL_USER --password-stdin docker.oneshell.in
-    # Build the Docker image
+    # Build the Docker image with the CI_COMMIT_SHA as the tag
     - docker build -t docker.oneshell.in/library/compose-builder:latest .
-    # Push the Docker image
     - docker push docker.oneshell.in/library/compose-builder:latest
+  after_script:
+    # Clean up Docker images to save space
+    - docker rmi docker.oneshell.in/library/compose-builder:latest
