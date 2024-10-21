@@ -16,9 +16,6 @@ package-qa:
       command: ['--insecure-registry=docker.oneshell.in']
   before_script:
     - docker info
-    # Install Docker Compose
-    - curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    - chmod +x /usr/local/bin/docker-compose
     - docker-compose --version
   script:
     - echo $DOCKER_ONESHELL_PASSWORD | docker login --username $DOCKER_ONESHELL_USER --password-stdin docker.oneshell.in
