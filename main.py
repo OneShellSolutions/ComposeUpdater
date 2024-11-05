@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, send_file
+from flask_cors import CORS  # Import CORS
 import docker
 import os
 import zipfile
@@ -10,6 +11,9 @@ import shutil
 import logging
 
 app = Flask(__name__)
+
+# Initialize CORS to allow all origins
+CORS(app)  # This will allow requests from any origin
 
 # Initialize Docker client
 client = docker.DockerClient(base_url='unix://var/run/docker.sock')
