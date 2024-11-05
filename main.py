@@ -104,18 +104,39 @@ def health_check():
     containers = client.containers.list()
     status = {}
     all_services_running = True
+    failed_services = []
 
     for required_service in REQUIRED_SERVICES:
         container_status = next((container.status for container in containers if container.name == required_service), 'not found')
         if container_status != 'running':
             all_services_running = False
+            failed_services.append(required_service)
         status[required_service] = container_status
+
+
+    # Check the health endpoint
+    try:
+        response = requests.get('http://host.docker.internal:3003/health')
+        if response.status_code == 200:
+            health_status = response.json().get('status', 'unknown')
+            if health_status != 'Pos win exe':
+                all_services_running = False
+                failed_services.append('Printer Util Failed')
+        else:
+            all_services_running = False
+            failed_services.append('Printer Util Failed')
+    except requests.RequestException:
+        all_services_running = False
+        failed_services.append('Printer Util Failed')
+
+
+    if not all_services_running:
+        print(f"Failed services: {failed_services}")
 
     if all_services_running:
         return jsonify({"status": "success", "message": "All services are running"}), 200
     else:
-        return jsonify({"status": "failure", "message": "One or more services are not running", "details": status}), 500
-
+        return jsonify({"status": "failure", "message": "One or more services are not running", "details": status, "failed_services": failed_services}), 500
 # Logs download endpoint
 @app.route('/logs', methods=['GET'])
 def download_logs():
