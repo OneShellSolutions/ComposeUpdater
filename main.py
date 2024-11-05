@@ -22,7 +22,7 @@ client = docker.DockerClient(base_url='unix://var/run/docker.sock')
 logging.basicConfig(level=logging.INFO)
 
 # Environment variables
-REQUIRED_SERVICES = os.getenv('REQUIRED_SERVICES', 'compose-updater,mongodb,nats-server,posNodeBackend,posbackend,watchtower').split(',')
+REQUIRED_SERVICES = os.getenv('REQUIRED_SERVICES', 'compose-updater,mongodb,nats-server,posNodeBackend,posbackend,watchtower,posFrontend').split(',')
 GITHUB_REPO = os.getenv('GITHUB_REPO', 'https://github.com/Manikanta-Reddy-Pasala/pos-deployment.git')
 COMPOSE_FILE_PATH = os.getenv('COMPOSE_FILE_PATH', 'docker-compose/docker-compose.yaml')
 REPO_DIR = '/app/repo'
