@@ -31,7 +31,7 @@ RUN apt-get update && apt-get install -y docker.io && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/*
 
 # Install Python dependencies
-RUN pip install --no-cache-dir flask docker gitpython
+RUN pip install --no-cache-dir flask flask_cors docker gitpython
 
 # Set the working directory
 WORKDIR /app
