@@ -6,7 +6,8 @@ echo Setting PowerShell Execution Policy to RemoteSigned for this process...
 powershell -Command "Set-ExecutionPolicy RemoteSigned -Scope Process -Force"
 if %errorlevel% neq 0 (
     echo Error: Failed to set execution policy. Exiting.
-    exit /b 1
+    pause
+    goto :EOF
 )
 
 :: Set the base directory and other variables
@@ -15,6 +16,11 @@ set "REPO_URL=https://github.com/Manikanta-Reddy-Pasala/pos-deployment.git"
 set "FOLDER_NAME=pos-deployment"
 set "EXE_NAME=oneshell-print.exe"
 set "EXE_URL=https://pos-download.oneshell.in/download/flavor/default/1.0.0/windows_32/oneshell-printer-util.exe"
+set "NSSM_URL=https://pos-download.oneshell.in/download/flavor/default/1.1.1/windows_32/nssm.exe"
+
+:: Define the path to the NSSM executable and the target executable
+set "NSSM_PATH=%BASE_DIR%%FOLDER_NAME%\nssm.exe"
+set "EXE_PATH=%BASE_DIR%%FOLDER_NAME%\%EXE_NAME%"
 
 :: Log the start of the script
 echo Starting script...
@@ -23,7 +29,8 @@ echo Starting script...
 cd /d %BASE_DIR%
 if %errorlevel% neq 0 (
     echo Error: Failed to navigate to %BASE_DIR%.
-    exit /b 1
+    pause
+    goto :EOF
 )
 
 :: Clone the repository if it doesn't exist; otherwise, pull the latest changes
@@ -32,7 +39,8 @@ if not exist "%BASE_DIR%%FOLDER_NAME%" (
     git clone %REPO_URL% %FOLDER_NAME%
     if %errorlevel% neq 0 (
         echo Error: Failed to clone the repository.
-        exit /b 1
+        pause
+        goto :EOF
     )
 ) else (
     echo Pulling the latest changes for %FOLDER_NAME%...
@@ -40,7 +48,8 @@ if not exist "%BASE_DIR%%FOLDER_NAME%" (
     git pull
     if %errorlevel% neq 0 (
         echo Error: Failed to pull latest changes.
-        exit /b 1
+        pause
+        goto :EOF
     )
     cd ..
 )
@@ -49,7 +58,19 @@ if not exist "%BASE_DIR%%FOLDER_NAME%" (
 cd %BASE_DIR%%FOLDER_NAME%
 if %errorlevel% neq 0 (
     echo Error: Failed to navigate to the repository folder.
-    exit /b 1
+    pause
+    goto :EOF
+)
+
+:: Download NSSM if it doesn't exist
+if not exist "%NSSM_PATH%" (
+    echo Downloading NSSM from %NSSM_URL%...
+    powershell -Command "Invoke-WebRequest -Uri %NSSM_URL% -OutFile %NSSM_PATH%"
+    if %errorlevel% neq 0 (
+        echo Error: Failed to download NSSM.
+        pause
+        goto :EOF
+    )
 )
 
 :: Check if the executable exists; if not, download it
@@ -58,7 +79,8 @@ if not exist "%EXE_NAME%" (
     powershell -Command "Invoke-WebRequest -Uri %EXE_URL% -OutFile %EXE_NAME%"
     if %errorlevel% neq 0 (
         echo Error: Failed to download the executable.
-        exit /b 1
+        pause
+        goto :EOF
     )
 )
 
@@ -67,7 +89,8 @@ echo Starting Docker Compose...
 docker-compose up -d
 if %errorlevel% neq 0 (
     echo Error: Failed to start Docker Compose.
-    exit /b 1
+    pause
+    goto :EOF
 )
 
 :: Wait until all services are healthy
@@ -88,23 +111,44 @@ if /i "%ALL_HEALTHY%"=="false" goto WAIT_LOOP
 
 echo All services are healthy.
 
-:: Define the path to the executable
-set "EXE_PATH=%BASE_DIR%%FOLDER_NAME%\%EXE_NAME%"
+:: Remove existing service if it exists
+%NSSM_PATH% stop "OneShellPrinterUtilService" >nul 2>&1
+%NSSM_PATH% remove "OneShellPrinterUtilService" confirm >nul 2>&1
 
-:: Create a Windows service to run the executable in the background
-echo Creating a Windows service...
-sc create "MyExecutableService" binPath="%EXE_PATH%" start=auto
+:: Create a Windows service to run the executable in the background using NSSM
+echo Creating a Windows service with NSSM...
+%NSSM_PATH% install "OneShellPrinterUtilService" "%EXE_PATH%"
+%NSSM_PATH% set "OneShellPrinterUtilService" Start SERVICE_AUTO_START
+%NSSM_PATH% set "OneShellPrinterUtilService" DisplayName "Oneshell printer Background Service"
+%NSSM_PATH% set "OneShellPrinterUtilService" Description "Service to run oneshell printer continuously in the background"
+
+:: Set the correct process priority
+%NSSM_PATH% set "OneShellPrinterUtilService" AppPriority IDLE_PRIORITY_CLASS
 if %errorlevel% neq 0 (
-    echo Error: Failed to create Windows service.
-    exit /b 1
+    echo Error: Failed to set process priority.
+    pause
+    goto :EOF
 )
-sc description "MyExecutableService" "Service to run MyExecutable in the background continuously"
-sc start "MyExecutableService"
+
+%NSSM_PATH% set "OneShellPrinterUtilService" AppExit Default Restart
+
+:: Start the service and check the status
+%NSSM_PATH% start "OneShellPrinterUtilService"
 if %errorlevel% neq 0 (
     echo Error: Failed to start Windows service.
-    exit /b 1
+    pause
+    goto :EOF
+)
+
+:: Check if the service is running
+sc query "OneShellPrinterUtilService" | findstr /i "RUNNING"
+if %errorlevel% neq 0 (
+    echo Error: Service did not start successfully.
+    pause
+    goto :EOF
 )
 
 :: Script complete
 echo All tasks completed successfully.
-exit /b 0
+echo The terminal will remain open for 10 minutes. Press Ctrl+C to stop the script manually.
+timeout /t 600
