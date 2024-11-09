@@ -83,7 +83,6 @@ if not exist "%EXE_NAME%" (
         goto :EOF
     )
 )
-
 :: Start Docker Compose and wait for all services to start
 echo Starting Docker Compose...
 docker-compose up -d
@@ -99,8 +98,7 @@ echo Waiting for services to be healthy...
 set "ALL_HEALTHY=true"
 for /f "tokens=*" %%i in ('docker-compose ps -q') do (
     set "CONTAINER=%%i"
-    set "STATUS="
-    for /f "tokens=*" %%j in ('docker inspect -f "{{.State.Health.Status}}" %CONTAINER%') do set "STATUS=%%j"
+    for /f %%j in ('docker inspect -f "{{.State.Health.Status}}" %%i') do set "STATUS=%%j"
     if /i not "%STATUS%"=="healthy" (
         echo Service %%i is not healthy yet...
         set "ALL_HEALTHY=false"
@@ -109,7 +107,7 @@ for /f "tokens=*" %%i in ('docker-compose ps -q') do (
 )
 if /i "%ALL_HEALTHY%"=="false" goto WAIT_LOOP
 
-echo All services are healthy.
+echo All services are healthy
 
 :: Remove existing service if it exists
 %NSSM_PATH% stop "OneShellPrinterUtilService" >nul 2>&1
