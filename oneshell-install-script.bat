@@ -1,14 +1,15 @@
 @echo off
 setlocal
 
+set "GIT_URL=https://github.com/git-for-windows/git/releases/download/v2.42.0.windows.1/Git-2.42.0-64-bit.exe"
+
 :: Check if Git is installed
 echo Checking for Git installation...
 git --version >nul 2>&1
 if %errorlevel% neq 0 (
     echo Git is not installed. Downloading and installing Git...
-    set "GIT_URL=https://github.com/git-for-windows/git/releases/download/v2.42.0.windows.1/Git-2.42.0-64-bit.exe"
     set "GIT_INSTALLER=%temp%\GitInstaller.exe"
-    powershell -Command "Invoke-WebRequest -Uri %GIT_URL% -OutFile %GIT_INSTALLER%"
+    powershell -Command "Invoke-WebRequest -Uri '%GIT_URL%' -OutFile '%GIT_INSTALLER%'"
     start /wait "" "%GIT_INSTALLER%" /VERYSILENT /NORESTART
     del "%GIT_INSTALLER%"
 )
