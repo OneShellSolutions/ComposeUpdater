@@ -123,13 +123,17 @@ echo Waiting for all Docker services to be healthy...
 set "ALL_HEALTHY=true"
 for /f "tokens=*" %%i in ('docker-compose ps -q') do (
     set "STATUS="
-    for /f "tokens=*" %%j in ('docker inspect -f "{{.State.Health.Status}}" %%i') do set "STATUS=%%j"
-    if /i not "!STATUS!"=="healthy" (
-        set "ALL_HEALTHY=false"
-        timeout /t 5 >nul
+    for /f "tokens=*" %%j in ('docker inspect -f "{{.State.Health.Status}}" %%i') do (
+        set "STATUS=%%j"
+        if /i "!STATUS!" NEQ "healthy" (
+            set "ALL_HEALTHY=false"
+        )
     )
 )
-if /i "!ALL_HEALTHY!"=="false" goto WAIT_LOOP
+if /i "!ALL_HEALTHY!"=="false" (
+    timeout /t 5 >nul
+    goto WAIT_LOOP
+)
 
 rem ======================
 rem Create and configure Windows service with NSSM
