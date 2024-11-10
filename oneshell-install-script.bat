@@ -6,7 +6,7 @@ rem Configurable Variables
 rem ======================
 set "BASE_DIR=C:\"
 set "DOWNLOAD_URL=https://codeload.github.com/Manikanta-Reddy-Pasala/pos-deployment/zip/refs/heads/master"
-set "FOLDER_NAME=pos-deployment"
+set "FOLDER_NAME=pos-deployment-master"
 set "EXE_NAME=oneshell-print-util-win.exe"
 set "NSSM_NAME=nssm.exe"
 set "SERVICE_NAME=OneShellPrinterUtilService"
@@ -15,7 +15,7 @@ rem ======================
 rem Derived Paths
 rem ======================
 set "ZIP_PATH=%BASE_DIR%pos-deployment.zip"
-set "EXTRACTED_FOLDER_PATH=%BASE_DIR%%FOLDER_NAME%-master"
+set "EXTRACTED_FOLDER_PATH=%BASE_DIR%%FOLDER_NAME%"
 set "NSSM_PATH=%EXTRACTED_FOLDER_PATH%\%NSSM_NAME%"
 set "EXE_PATH=%EXTRACTED_FOLDER_PATH%\%EXE_NAME%"
 
