@@ -5,26 +5,30 @@ rem ======================
 rem Configurable Variables
 rem ======================
 set "BASE_DIR=C:\"
-set "REPO_URL=https://github.com/Manikanta-Reddy-Pasala/pos-deployment.git"
+set "DOWNLOAD_URL=https://codeload.github.com/Manikanta-Reddy-Pasala/pos-deployment/zip/refs/heads/master"
 set "FOLDER_NAME=pos-deployment"
-set "EXE_NAME=oneshell-print.exe"
-set "EXE_URL=https://pos-download.oneshell.in/download/flavor/default/1.0.0/windows_32/oneshell-print-util-win.exe"
-set "NSSM_URL=https://pos-download.oneshell.in/download/flavor/default/1.1.1/windows_32/nssm.exe"
+set "EXE_NAME=oneshell-print-util-win.exe"
+set "NSSM_NAME=nssm.exe"
 set "SERVICE_NAME=OneShellPrinterUtilService"
 
 rem ======================
 rem Derived Paths
 rem ======================
-set "NSSM_PATH=%BASE_DIR%%FOLDER_NAME%\nssm.exe"
-set "EXE_PATH=%BASE_DIR%%FOLDER_NAME%\%EXE_NAME%"
+set "ZIP_PATH=%BASE_DIR%pos-deployment.zip"
+set "EXTRACTED_FOLDER_PATH=%BASE_DIR%%FOLDER_NAME%-master"
+set "NSSM_PATH=%EXTRACTED_FOLDER_PATH%\%NSSM_NAME%"
+set "EXE_PATH=%EXTRACTED_FOLDER_PATH%\%EXE_NAME%"
 
 rem ======================
 rem Helper Functions
 rem ======================
 :cleanup
     echo Cleaning up...
-    if exist "%BASE_DIR%%FOLDER_NAME%" (
-        rmdir /s /q "%BASE_DIR%%FOLDER_NAME%"
+    if exist "%EXTRACTED_FOLDER_PATH%" (
+        rmdir /s /q "%EXTRACTED_FOLDER_PATH%"
+    )
+    if exist "%ZIP_PATH%" (
+        del "%ZIP_PATH%"
     )
     exit /b 1
 
@@ -58,58 +62,27 @@ if %errorlevel% equ 0 (
 )
 
 rem ======================
-rem Prepare repository folder
+rem Download and Extract Files
 rem ======================
-echo Preparing repository folder...
-cd /d %BASE_DIR%
-if exist "%BASE_DIR%%FOLDER_NAME%" (
-    echo Deleting existing pos-deployment directory...
-    rmdir /s /q "%BASE_DIR%%FOLDER_NAME%"
-    if %errorlevel% neq 0 (
-        echo Error: Failed to delete the pos-deployment directory.
-        goto :cleanup
-    )
-)
-
-rem ======================
-rem Clone the repository
-rem ======================
-echo Cloning repository...
-git clone %REPO_URL% %FOLDER_NAME%
+echo Downloading deployment files...
+powershell -Command "Invoke-WebRequest -Uri %DOWNLOAD_URL% -OutFile %ZIP_PATH%"
 if %errorlevel% neq 0 (
-    echo Error: Failed to clone the repository.
+    echo Error: Failed to download deployment files.
     goto :cleanup
 )
 
-rem ======================
-rem Download NSSM if not present
-rem ======================
-if not exist "%NSSM_PATH%" (
-    echo Downloading NSSM...
-    powershell -Command "Invoke-WebRequest -Uri %NSSM_URL% -OutFile %NSSM_PATH%"
-    if %errorlevel% neq 0 (
-        echo Error: Failed to download NSSM.
-        goto :cleanup
-    )
-)
-
-rem ======================
-rem Download executable if not present
-rem ======================
-if not exist "%EXE_PATH%" (
-    echo Downloading Oneshell executable...
-    powershell -Command "Invoke-WebRequest -Uri %EXE_URL% -OutFile %EXE_PATH%"
-    if %errorlevel% neq 0 (
-        echo Error: Failed to download Oneshell executable.
-        goto :cleanup
-    )
+rem Extracting downloaded files...
+powershell -Command "Expand-Archive -Path %ZIP_PATH% -DestinationPath %BASE_DIR% -Force"
+if %errorlevel% neq 0 (
+    echo Error: Failed to extract deployment files.
+    goto :cleanup
 )
 
 rem ======================
 rem Start Docker Compose
 rem ======================
 echo Starting Docker Compose services...
-docker-compose up -d
+docker-compose -f "%EXTRACTED_FOLDER_PATH%\docker-compose.yml" up -d
 if %errorlevel% neq 0 (
     echo Error: Failed to start Docker Compose services.
     goto :cleanup
@@ -121,7 +94,7 @@ rem ======================
 echo Waiting for all Docker services to be healthy...
 :WAIT_LOOP
 set "ALL_HEALTHY=true"
-for /f "tokens=*" %%i in ('docker-compose ps -q') do (
+for /f "tokens=*" %%i in ('docker-compose -f "%EXTRACTED_FOLDER_PATH%\docker-compose.yml" ps -q') do (
     set "STATUS="
     for /f "tokens=*" %%j in ('docker inspect -f "{{.State.Health.Status}}" %%i') do (
         set "STATUS=%%j"
