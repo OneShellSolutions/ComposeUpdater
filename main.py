@@ -186,6 +186,58 @@ def cpu_memory_usage():
     
     return jsonify(usage_stats)
 
+
+@app.route('/restart-services', methods=['POST'])
+def restart_services():
+    try:
+        # Stop all containers
+        logging.info("Stopping all services...")
+        client.containers.prune()  # Remove stopped containers to avoid conflicts
+        subprocess.run(['docker-compose', '-f', f"{REPO_DIR}/{COMPOSE_FILE_PATH}", 'down'], check=True)
+
+        # Start services
+        logging.info("Starting all services...")
+        subprocess.run(['docker-compose', '-f', f"{REPO_DIR}/{COMPOSE_FILE_PATH}", 'up', '-d'], check=True)
+
+        # Wait for all services to be running
+        timeout = 300  # Timeout in seconds
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            containers = client.containers.list()
+            statuses = {container.name: container.status for container in containers}
+
+            all_running = all(
+                statuses.get(service, 'not found') == 'running'
+                for service in REQUIRED_SERVICES
+            )
+
+            if all_running:
+                return jsonify({
+                    "status": "success",
+                    "message": "All services are running"
+                }), 200
+
+            logging.info("Waiting for services to start...")
+            time.sleep(5)
+
+        # If timeout is reached and services are not all running
+        failed_services = [
+            service for service in REQUIRED_SERVICES
+            if statuses.get(service, 'not found') != 'running'
+        ]
+        return jsonify({
+            "status": "failure",
+            "message": "Timeout reached; some services are not running",
+            "failed_services": failed_services
+        }), 500
+
+    except Exception as e:
+        logging.error(f"Error during service restart: {e}")
+        return jsonify({
+            "status": "failure",
+            "message": f"Error during service restart: {e}"
+        }), 500
+
 if __name__ == '__main__':
     start_periodic_check()
     app.run(host='0.0.0.0', port=5000)
