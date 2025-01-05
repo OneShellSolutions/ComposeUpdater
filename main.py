@@ -186,18 +186,24 @@ def cpu_memory_usage():
     
     return jsonify(usage_stats)
 
-
-@app.route('/restart-services', methods=['POST'])
-def restart_services():
+@app.route('/restart-services', methods=['GET'])
+def restart_services_by_names():
     try:
-        # Stop all containers
-        logging.info("Stopping all services...")
-        client.containers.prune()  # Remove stopped containers to avoid conflicts
-        subprocess.run(['docker-compose', '-f', f"{REPO_DIR}/{COMPOSE_FILE_PATH}", 'down'], check=True)
+        # Names of the services from docker-compose.yml
+        services_to_restart = [
+            "posbackend",
+            "posNodeBackend",
+            "posFrontend",
+            "mongodb",
+            "nats-server"
+        ]
 
-        # Start services
-        logging.info("Starting all services...")
-        subprocess.run(['docker-compose', '-f', f"{REPO_DIR}/{COMPOSE_FILE_PATH}", 'up', '-d'], check=True)
+        # Restart each container by name
+        for service_name in services_to_restart:
+            container = client.containers.get(service_name)
+            if container:
+                logging.info(f"Restarting container: {service_name}")
+                container.restart(timeout=10)  # Gracefully restart with a timeout
 
         # Wait for all services to be running
         timeout = 300  # Timeout in seconds
@@ -206,9 +212,10 @@ def restart_services():
             containers = client.containers.list()
             statuses = {container.name: container.status for container in containers}
 
+            # Check if all required services are running
             all_running = all(
                 statuses.get(service, 'not found') == 'running'
-                for service in REQUIRED_SERVICES
+                for service in services_to_restart
             )
 
             if all_running:
@@ -220,9 +227,9 @@ def restart_services():
             logging.info("Waiting for services to start...")
             time.sleep(5)
 
-        # If timeout is reached and services are not all running
+        # If timeout is reached
         failed_services = [
-            service for service in REQUIRED_SERVICES
+            service for service in services_to_restart
             if statuses.get(service, 'not found') != 'running'
         ]
         return jsonify({
