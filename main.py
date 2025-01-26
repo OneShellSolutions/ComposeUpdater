@@ -77,7 +77,7 @@ def pull_and_apply_compose():
             repo.remotes.origin.pull('master')
             # Use --platform to specify amd64 to avoid platform mismatch
             subprocess.run(['docker-compose', '-f', f"{REPO_DIR}/{COMPOSE_FILE_PATH}", 'pull'], check=True)
-            subprocess.run(['docker-compose', '-f', f"{REPO_DIR}/{COMPOSE_FILE_PATH}", 'up', '-d'], check=True)
+            subprocess.run(['docker-compose', '-f', f"{REPO_DIR}/{COMPOSE_FILE_PATH}", 'up', '-d', '--no-recreate'], check=True)
         else:
             logging.info("No changes detected, skipping docker-compose up.")
     
