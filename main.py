@@ -30,6 +30,28 @@ REPO_DIR = '/app/repo'
 LOG_DIR = "/app/logs"
 EXCLUDED_LOGS = ["mongodb.log", "watchtower.log", "nats-server.log", "compose-updater.log"]
 
+
+def stop_conflicting_containers(conflicting_names):
+    for name in conflicting_names:
+        try:
+            # Check if the container exists
+            result = subprocess.run(
+                ['docker', 'ps', '-a', '-q', '-f', f'name=^{name}$'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            container_id = result.stdout.strip()
+            if container_id:
+                logging.info(f"Stopping and removing conflicting container '{name}' (ID: {container_id})...")
+                subprocess.run(['docker', 'stop', container_id], check=True)
+                subprocess.run(['docker', 'rm', container_id], check=True)
+                logging.info(f"Removed container '{name}'")
+            else:
+                logging.info(f"No conflicting container named '{name}' found.")
+        except subprocess.CalledProcessError as e:
+            logging.error(f"Error handling container '{name}': {e.stderr.strip()}")
+
 def pull_and_apply_compose():
     GITHUB_REPO_URL = os.getenv('GITHUB_REPO_URL', 'https://github.com/OneShellSolutions/PosDeployment.git')
     COMPOSE_FILE_PATH = os.getenv('COMPOSE_FILE_PATH', 'docker-compose.yaml')
@@ -75,6 +97,9 @@ def pull_and_apply_compose():
         if current != latest:
             logging.info("Changes detected, pulling updates...")
             repo.remotes.origin.pull('master')
+
+            conflicting_containers = ['nats-server', 'PosPythonBackend', 'watchtower', 'mongodb', 'posNodeBackend', 'posbackend', 'posFrontend']
+            stop_conflicting_containers(conflicting_containers)
             # Use --platform to specify amd64 to avoid platform mismatch
             subprocess.run(['docker-compose', '-f', f"{REPO_DIR}/{COMPOSE_FILE_PATH}", 'pull'], check=True)
             subprocess.run([

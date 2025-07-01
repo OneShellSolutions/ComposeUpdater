@@ -18,7 +18,7 @@ package-qa:
     # Login to the Docker registry
     - echo $DOCKER_ONESHELL_PASSWORD | docker login --username $DOCKER_ONESHELL_USER --password-stdin docker.oneshell.in
     # Build the Docker image with the CI_COMMIT_SHA as the tag
-    - docker build -t docker.oneshell.in/library/compose-builder:latest .
+    - docker build -t docker.oneshell.in/library/compose-builder:local .
     - docker push docker.oneshell.in/library/compose-builder:local
   after_script:
     # Clean up Docker images to save space
