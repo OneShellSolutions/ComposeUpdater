@@ -51,7 +51,7 @@ def patch_volume_paths(compose_path, host_data_path):
             for vol in svc["volumes"]:
                 if isinstance(vol, str):
                     host, sep, container = vol.partition(":")
-                    if host.startswith("/app/data/"):
+                    if host.startswith("/app/data"):
                         real_host = host.replace("/app/data", host_data_path)
                         new_volumes.append(f"{real_host}:{container}")
                         replacements.append((svc_name, host, real_host))
