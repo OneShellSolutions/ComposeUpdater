@@ -10,6 +10,7 @@ import threading
 import git
 import shutil
 import logging
+import yaml
 
 app = Flask(__name__)
 
@@ -122,7 +123,7 @@ def pull_and_apply_compose():
             logging.info("No changes in repository. Skipping.")
     except Exception as e:
         logging.error(f"❌ Error during update: {e}")
-        
+
 
 def periodic_check():
     while True:
