@@ -22,97 +22,107 @@ client = docker.DockerClient(base_url='unix://var/run/docker.sock')
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 
-# Environment variables
-REQUIRED_SERVICES = os.getenv('REQUIRED_SERVICES', 'compose-updater,mongodb,nats-server,posNodeBackend,posbackend,watchtower,posFrontend').split(',')
-GITHUB_REPO_URL = os.getenv('GITHUB_REPO_URL', 'https://github.com/OneShellSolutions/PosDeployment.git')
+REPO_DIR = "/app/repo"
 COMPOSE_FILE_PATH = os.getenv('COMPOSE_FILE_PATH', 'docker-compose.yaml')
-REPO_DIR = '/app/repo'
-LOG_DIR = "/app/logs"
-EXCLUDED_LOGS = ["mongodb.log", "watchtower.log", "nats-server.log", "compose-updater.log"]
+GITHUB_REPO_URL = os.getenv('GITHUB_REPO_URL', 'https://github.com/OneShellSolutions/PosDeployment.git')
+
+logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
 
 
-def stop_conflicting_containers(conflicting_names):
-    for name in conflicting_names:
-        try:
-            # Check if the container exists
-            result = subprocess.run(
-                ['docker', 'ps', '-a', '-q', '-f', f'name=^{name}$'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
-            container_id = result.stdout.strip()
-            if container_id:
-                logging.info(f"Stopping and removing conflicting container '{name}' (ID: {container_id})...")
-                subprocess.run(['docker', 'stop', container_id], check=True)
-                subprocess.run(['docker', 'rm', container_id], check=True)
-                logging.info(f"Removed container '{name}'")
-            else:
-                logging.info(f"No conflicting container named '{name}' found.")
-        except subprocess.CalledProcessError as e:
-            logging.error(f"Error handling container '{name}': {e.stderr.strip()}")
+def get_host_path_for_app_data():
+    client = docker.DockerClient(base_url='unix://var/run/docker.sock')
+    container = client.containers.get("compose-updater")
+    for mount in container.attrs["Mounts"]:
+        if mount["Destination"] == "/app/data":
+            logging.info(f"Detected host path for /app/data: {mount['Source']}")
+            return mount["Source"]
+    raise RuntimeError("Could not find /app/data mount")
+
+
+def patch_volume_paths(compose_path, host_data_path):
+    with open(compose_path, 'r') as f:
+        data = yaml.safe_load(f)
+
+    replacements = []
+    for svc_name, svc in data.get("services", {}).items():
+        if "volumes" in svc:
+            new_volumes = []
+            for vol in svc["volumes"]:
+                if isinstance(vol, str):
+                    host, sep, container = vol.partition(":")
+                    if host.startswith("/app/data/"):
+                        real_host = host.replace("/app/data", host_data_path)
+                        new_volumes.append(f"{real_host}:{container}")
+                        replacements.append((svc_name, host, real_host))
+                        logging.info(f"[PATCH] {svc_name}: {host} → {real_host}")
+                    else:
+                        new_volumes.append(vol)
+                else:
+                    new_volumes.append(vol)
+            svc["volumes"] = new_volumes
+
+    patched_path = compose_path.replace(".yaml", ".patched.yaml")
+    with open(patched_path, 'w') as f:
+        yaml.safe_dump(data, f)
+
+    logging.info(f"✔️ Patched compose file saved: {patched_path}")
+    return patched_path
+
+
+def stop_conflicting_containers(names):
+    for name in names:
+        result = subprocess.run(
+            ["docker", "ps", "-a", "-q", "-f", f"name=^{name}$"],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        )
+        container_id = result.stdout.strip()
+        if container_id:
+            logging.info(f"Stopping/removing container: {name}")
+            subprocess.run(["docker", "stop", container_id], check=True)
+            subprocess.run(["docker", "rm", container_id], check=True)
+
 
 def pull_and_apply_compose():
-    GITHUB_REPO_URL = os.getenv('GITHUB_REPO_URL', 'https://github.com/OneShellSolutions/PosDeployment.git')
-    COMPOSE_FILE_PATH = os.getenv('COMPOSE_FILE_PATH', 'docker-compose.yaml')
-    REPO_DIR = '/app/repo'
-    
     try:
-        # Check if the repository exists and is valid
         if os.path.exists(REPO_DIR):
             if os.path.isdir(REPO_DIR):
                 try:
                     repo = git.Repo(REPO_DIR)
-                    logging.info(f"Using existing repository in {REPO_DIR}")
+                    logging.info(f"Using existing Git repo: {REPO_DIR}")
                 except git.exc.InvalidGitRepositoryError:
-                    logging.info(f"Invalid Git repository. Cleaning up {REPO_DIR}...")
                     shutil.rmtree(REPO_DIR)
-                    logging.info(f"Deleted {REPO_DIR}. Cloning fresh repository.")
                     repo = git.Repo.clone_from(GITHUB_REPO_URL, REPO_DIR)
             else:
-                logging.error(f"{REPO_DIR} exists but is not a directory. Aborting.")
+                logging.error("REPO_DIR exists but is not a directory.")
                 return
         else:
-            logging.info(f"Cloning repository from {GITHUB_REPO_URL} into {REPO_DIR}...")
+            logging.info("Cloning Git repo...")
             repo = git.Repo.clone_from(GITHUB_REPO_URL, REPO_DIR)
 
-        # Ensure we are on the master branch
-        if repo.active_branch.name != 'master':
-            logging.info("Switching to master branch...")
-            repo.git.checkout('master')
-
-
-        # Fetch latest changes
-        current = repo.head.commit
-
-        # Force reset to remove local changes and ensure the repo is clean
-        logging.info("Resetting repository to the latest commit from origin...")
-        repo.git.reset('--hard', 'origin/master')
-
-    
         repo.remotes.origin.fetch()
-        latest = repo.head.commit
-        logging.info(f"Current commit: {current}, Latest commit: {latest}")
+        current = repo.head.commit
+        latest = repo.remotes.origin.refs.master.commit
 
         if current != latest:
-            logging.info("Changes detected, pulling updates...")
+            logging.info("Repo updated. Pulling new commit.")
+            repo.git.reset("--hard", "origin/master")
             repo.remotes.origin.pull('master')
 
-            conflicting_containers = ['nats-server', 'PosPythonBackend', 'watchtower', 'mongodb', 'posNodeBackend', 'posbackend', 'posFrontend']
-            stop_conflicting_containers(conflicting_containers)
-            # Use --platform to specify amd64 to avoid platform mismatch
-            subprocess.run(['docker-compose', '-f', f"{REPO_DIR}/{COMPOSE_FILE_PATH}", 'pull'], check=True)
-            subprocess.run([
-                'docker-compose',
-                '-f', f"{REPO_DIR}/{COMPOSE_FILE_PATH}",
-                'up', '-d', '--force-recreate'
-            ], check=True)
-        else:
-            logging.info("No changes detected, skipping docker-compose up.")
-    
-    except Exception as e:
-        logging.error(f"Error during the pull-and-apply process: {e}")
+            stop_conflicting_containers([
+                'nats-server', 'PosPythonBackend', 'watchtower',
+                'mongodb', 'posNodeBackend', 'posbackend', 'posFrontend'
+            ])
 
+            host_data_path = get_host_path_for_app_data()
+            patched_file = patch_volume_paths(f"{REPO_DIR}/{COMPOSE_FILE_PATH}", host_data_path)
+
+            subprocess.run(["docker-compose", "-f", patched_file, "pull"], check=True)
+            subprocess.run(["docker-compose", "-f", patched_file, "up", "-d", "--force-recreate"], check=True)
+        else:
+            logging.info("No changes in repository. Skipping.")
+    except Exception as e:
+        logging.error(f"❌ Error during update: {e}")
+        
 
 def periodic_check():
     while True:
