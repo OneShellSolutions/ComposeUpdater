@@ -118,7 +118,7 @@ def pull_and_apply_compose():
             patched_file = patch_volume_paths(f"{REPO_DIR}/{COMPOSE_FILE_PATH}", host_data_path)
 
             # Copy the config file from the repo to a host-visible mount using `cp`
-            source_conf = "app/repo/nats-server.conf"
+            source_conf = "/app/repo/nats-server.conf"
             target_conf = "/app/data/repo/nats/nats-server.conf"
 
             try:
