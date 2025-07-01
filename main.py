@@ -117,6 +117,17 @@ def pull_and_apply_compose():
             host_data_path = get_host_path_for_app_data()
             patched_file = patch_volume_paths(f"{REPO_DIR}/{COMPOSE_FILE_PATH}", host_data_path)
 
+            # Copy the config file from the repo to a host-visible mount using `cp`
+            source_conf = "app/repo/nats-server.conf"
+            target_conf = "/app/data/repo/nats-server.conf"
+
+            try:
+                subprocess.run(["mkdir", "-p", "/app/data/repo"], check=True)
+                subprocess.run(["cp", "-f", source_conf, target_conf], check=True)
+                logging.info(f"✔️ Copied nats-server.conf → {target_conf}")
+            except subprocess.CalledProcessError as e:
+                logging.warning(f" Failed to copy nats-server.conf: {e}")
+
             subprocess.run(["docker-compose", "-f", patched_file, "pull"], check=True)
             subprocess.run(["docker-compose", "-f", patched_file, "up", "-d", "--force-recreate"], check=True)
         else:
