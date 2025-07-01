@@ -119,7 +119,7 @@ def pull_and_apply_compose():
 
             # Copy the config file from the repo to a host-visible mount using `cp`
             source_conf = "app/repo/nats-server.conf"
-            target_conf = "/app/data/repo/nats-server.conf"
+            target_conf = "/app/data/repo/nats/nats-server.conf"
 
             try:
                 subprocess.run(["mkdir", "-p", "/app/data/repo"], check=True)
