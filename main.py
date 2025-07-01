@@ -24,15 +24,15 @@ logging.basicConfig(level=logging.INFO)
 
 # Environment variables
 REQUIRED_SERVICES = os.getenv('REQUIRED_SERVICES', 'compose-updater,mongodb,nats-server,posNodeBackend,posbackend,watchtower,posFrontend').split(',')
-GITHUB_REPO_URL = os.getenv('GITHUB_REPO_URL', 'https://github.com/OneShellSolutions/ComposeUpdater.git')
-COMPOSE_FILE_PATH = os.getenv('COMPOSE_FILE_PATH', 'docker-compose/docker-compose.yaml')
+GITHUB_REPO_URL = os.getenv('GITHUB_REPO_URL', 'https://github.com/OneShellSolutions/PosDeployment.git')
+COMPOSE_FILE_PATH = os.getenv('COMPOSE_FILE_PATH', 'docker-compose.yaml')
 REPO_DIR = '/app/repo'
 LOG_DIR = "/app/logs"
 EXCLUDED_LOGS = ["mongodb.log", "watchtower.log", "nats-server.log", "compose-updater.log"]
 
 def pull_and_apply_compose():
-    GITHUB_REPO_URL = os.getenv('GITHUB_REPO_URL', 'https://github.com/OneShellSolutions/ComposeUpdater.git')
-    COMPOSE_FILE_PATH = os.getenv('COMPOSE_FILE_PATH', 'docker-compose/docker-compose.yaml')
+    GITHUB_REPO_URL = os.getenv('GITHUB_REPO_URL', 'https://github.com/OneShellSolutions/PosDeployment.git')
+    COMPOSE_FILE_PATH = os.getenv('COMPOSE_FILE_PATH', 'docker-compose.yaml')
     REPO_DIR = '/app/repo'
     
     try:
