@@ -24,14 +24,14 @@ logging.basicConfig(level=logging.INFO)
 
 # Environment variables
 REQUIRED_SERVICES = os.getenv('REQUIRED_SERVICES', 'compose-updater,mongodb,nats-server,posNodeBackend,posbackend,watchtower,posFrontend').split(',')
-GITHUB_REPO = os.getenv('GITHUB_REPO', 'https://github.com/Manikanta-Reddy-Pasala/pos-deployment.git')
+GITHUB_REPO = os.getenv('GITHUB_REPO', 'https://github.com/OneShellSolutions/ComposeUpdater.git')
 COMPOSE_FILE_PATH = os.getenv('COMPOSE_FILE_PATH', 'docker-compose/docker-compose.yaml')
 REPO_DIR = '/app/repo'
 LOG_DIR = "/app/logs"
 EXCLUDED_LOGS = ["mongodb.log", "watchtower.log", "nats-server.log", "compose-updater.log"]
 
 def pull_and_apply_compose():
-    GITHUB_REPO = os.getenv('GITHUB_REPO', 'https://github.com/Manikanta-Reddy-Pasala/pos-deployment.git')
+    GITHUB_REPO = os.getenv('GITHUB_REPO', 'https://github.com/OneShellSolutions/ComposeUpdater.git')
     COMPOSE_FILE_PATH = os.getenv('COMPOSE_FILE_PATH', 'docker-compose/docker-compose.yaml')
     REPO_DIR = '/app/repo'
     
@@ -77,7 +77,7 @@ def pull_and_apply_compose():
             repo.remotes.origin.pull('master')
             # Use --platform to specify amd64 to avoid platform mismatch
             subprocess.run(['docker-compose', '-f', f"{REPO_DIR}/{COMPOSE_FILE_PATH}", 'pull'], check=True)
-            subprocess.run(['docker-compose', '-f', f"{REPO_DIR}/{COMPOSE_FILE_PATH}", 'up', '-d', '--no-recreate'], check=True)
+            subprocess.run(['docker-compose', '-f', f"{REPO_DIR}/{COMPOSE_FILE_PATH}", 'up', '-d'], check=True)
         else:
             logging.info("No changes detected, skipping docker-compose up.")
     
