@@ -24,14 +24,14 @@ logging.basicConfig(level=logging.INFO)
 
 # Environment variables
 REQUIRED_SERVICES = os.getenv('REQUIRED_SERVICES', 'compose-updater,mongodb,nats-server,posNodeBackend,posbackend,watchtower,posFrontend').split(',')
-GITHUB_REPO = os.getenv('GITHUB_REPO', 'https://github.com/OneShellSolutions/ComposeUpdater.git')
+GITHUB_REPO_URL = os.getenv('GITHUB_REPO_URL', 'https://github.com/OneShellSolutions/ComposeUpdater.git')
 COMPOSE_FILE_PATH = os.getenv('COMPOSE_FILE_PATH', 'docker-compose/docker-compose.yaml')
 REPO_DIR = '/app/repo'
 LOG_DIR = "/app/logs"
 EXCLUDED_LOGS = ["mongodb.log", "watchtower.log", "nats-server.log", "compose-updater.log"]
 
 def pull_and_apply_compose():
-    GITHUB_REPO = os.getenv('GITHUB_REPO', 'https://github.com/OneShellSolutions/ComposeUpdater.git')
+    GITHUB_REPO_URL = os.getenv('GITHUB_REPO_URL', 'https://github.com/OneShellSolutions/ComposeUpdater.git')
     COMPOSE_FILE_PATH = os.getenv('COMPOSE_FILE_PATH', 'docker-compose/docker-compose.yaml')
     REPO_DIR = '/app/repo'
     
@@ -46,13 +46,13 @@ def pull_and_apply_compose():
                     logging.info(f"Invalid Git repository. Cleaning up {REPO_DIR}...")
                     shutil.rmtree(REPO_DIR)
                     logging.info(f"Deleted {REPO_DIR}. Cloning fresh repository.")
-                    repo = git.Repo.clone_from(GITHUB_REPO, REPO_DIR)
+                    repo = git.Repo.clone_from(GITHUB_REPO_URL, REPO_DIR)
             else:
                 logging.error(f"{REPO_DIR} exists but is not a directory. Aborting.")
                 return
         else:
-            logging.info(f"Cloning repository from {GITHUB_REPO} into {REPO_DIR}...")
-            repo = git.Repo.clone_from(GITHUB_REPO, REPO_DIR)
+            logging.info(f"Cloning repository from {GITHUB_REPO_URL} into {REPO_DIR}...")
+            repo = git.Repo.clone_from(GITHUB_REPO_URL, REPO_DIR)
 
         # Ensure we are on the master branch
         if repo.active_branch.name != 'master':
