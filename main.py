@@ -109,6 +109,10 @@ def pull_and_apply_compose():
             repo.git.reset("--hard", "origin/master")
             repo.remotes.origin.pull('master')
 
+
+            host_data_path = get_host_path_for_app_data()
+            patched_file = patch_volume_paths(f"{REPO_DIR}/{COMPOSE_FILE_PATH}", host_data_path)
+
             logging.info("Pulling latest Docker images...")
             subprocess.run(["docker-compose", "-f", patched_file, "pull"], check=True)
 
@@ -118,8 +122,6 @@ def pull_and_apply_compose():
                 'mongodb', 'posNodeBackend', 'posbackend', 'posFrontend'
             ])
 
-            host_data_path = get_host_path_for_app_data()
-            patched_file = patch_volume_paths(f"{REPO_DIR}/{COMPOSE_FILE_PATH}", host_data_path)
 
             # Copy the config file from the repo to a host-visible mount using `cp`
             # Define paths
