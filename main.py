@@ -109,6 +109,10 @@ def pull_and_apply_compose():
             repo.git.reset("--hard", "origin/master")
             repo.remotes.origin.pull('master')
 
+            logging.info("Pulling latest Docker images...")
+            subprocess.run(["docker-compose", "-f", patched_file, "pull"], check=True)
+
+
             stop_conflicting_containers([
                 'nats-server', 'PosPythonBackend', 'watchtower',
                 'mongodb', 'posNodeBackend', 'posbackend', 'posFrontend'
@@ -118,17 +122,21 @@ def pull_and_apply_compose():
             patched_file = patch_volume_paths(f"{REPO_DIR}/{COMPOSE_FILE_PATH}", host_data_path)
 
             # Copy the config file from the repo to a host-visible mount using `cp`
-            source_conf = "/app/repo/nats-server.conf"
-            target_conf = "/app/data/repo/nats/nats-server.conf"
+            # Define paths
+            source_conf = os.path.join("/app", "repo", "nats-server.conf")
+            target_dir = os.path.join("/app", "data", "repo", "nats")
+            target_conf = os.path.join(target_dir, "nats-server.conf")
 
             try:
-                subprocess.run(["mkdir", "-p", "/app/data/repo"], check=True)
-                subprocess.run(["cp", "-f", source_conf, target_conf], check=True)
-                logging.info(f"✔️ Copied nats-server.conf → {target_conf}")
-            except subprocess.CalledProcessError as e:
-                logging.warning(f" Failed to copy nats-server.conf: {e}")
+                # Create target directory if it doesn't exist
+                os.makedirs(target_dir, exist_ok=True)
 
-            subprocess.run(["docker-compose", "-f", patched_file, "pull"], check=True)
+                # Perform file copy using Python for cross-platform compatibility
+                shutil.copyfile(source_conf, target_conf)
+                logging.info(f"✔️ Copied nats-server.conf → {target_conf}")
+            except Exception as e:
+                logging.warning(f"⚠️ Failed to copy nats-server.conf: {e}")
+
             subprocess.run(["docker-compose", "-f", patched_file, "up", "-d", "--force-recreate"], check=True)
         else:
             logging.info("No changes in repository. Skipping.")
