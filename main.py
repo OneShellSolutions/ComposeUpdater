@@ -70,18 +70,6 @@ def patch_volume_paths(compose_path, host_data_path):
     return patched_path
 
 
-def stop_conflicting_containers(names):
-    for name in names:
-        result = subprocess.run(
-            ["docker", "ps", "-a", "-q", "-f", f"name=^{name}$"],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-        )
-        container_id = result.stdout.strip()
-        if container_id:
-            logging.info(f"Stopping/removing container: {name}")
-            subprocess.run(["docker", "stop", container_id], check=True)
-            subprocess.run(["docker", "rm", container_id], check=True)
-
 
 def pull_and_apply_compose():
     try:
@@ -141,7 +129,7 @@ def pull_and_apply_compose():
 
     except Exception as e:
         logging.error(f"❌ Error during update: {e}")
-        
+
 def periodic_check():
     while True:
         logging.info("Starting periodic update check...")
