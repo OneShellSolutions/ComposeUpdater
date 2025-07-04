@@ -100,6 +100,7 @@ def pull_and_apply_compose():
             logging.info("Cloning Git repo...")
             repo = git.Repo.clone_from(GITHUB_REPO_URL, REPO_DIR)
 
+        # Fetch updates from origin
         repo.remotes.origin.fetch()
         current = repo.head.commit
         latest = repo.remotes.origin.refs.master.commit
@@ -109,43 +110,38 @@ def pull_and_apply_compose():
             repo.git.reset("--hard", "origin/master")
             repo.remotes.origin.pull('master')
 
-
+            # Patch volume paths for macOS compatibility
             host_data_path = get_host_path_for_app_data()
             patched_file = patch_volume_paths(f"{REPO_DIR}/{COMPOSE_FILE_PATH}", host_data_path)
 
+            # Pull any updated Docker images
             logging.info("Pulling latest Docker images...")
             subprocess.run(["docker-compose", "-f", patched_file, "pull"], check=True)
 
-
-            stop_conflicting_containers([
-                'nats-server', 'PosPythonBackend', 'watchtower',
-                'mongodb', 'posNodeBackend', 'posbackend', 'posFrontend'
-            ])
-
-
-            # Copy the config file from the repo to a host-visible mount using `cp`
-            # Define paths
+            # Copy config file (e.g., nats-server.conf)
             source_conf = os.path.join("/app", "repo", "nats-server.conf")
             target_dir = os.path.join("/app", "data", "repo", "nats")
             target_conf = os.path.join(target_dir, "nats-server.conf")
-
             try:
-                # Create target directory if it doesn't exist
                 os.makedirs(target_dir, exist_ok=True)
-
-                # Perform file copy using Python for cross-platform compatibility
                 shutil.copyfile(source_conf, target_conf)
                 logging.info(f"✔️ Copied nats-server.conf → {target_conf}")
             except Exception as e:
                 logging.warning(f"⚠️ Failed to copy nats-server.conf: {e}")
 
-            subprocess.run(["docker-compose", "-f", patched_file, "up", "-d", "--force-recreate"], check=True)
+            # Bring up only what changed, remove orphans
+            subprocess.run([
+                "docker-compose", "-f", patched_file, "up", "-d", "--remove-orphans"
+            ], check=True)
+
+            logging.info("✅ Compose update applied successfully.")
+
         else:
             logging.info("No changes in repository. Skipping.")
+
     except Exception as e:
         logging.error(f"❌ Error during update: {e}")
-
-
+        
 def periodic_check():
     while True:
         logging.info("Starting periodic update check...")
