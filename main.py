@@ -119,7 +119,7 @@ def pull_and_apply_compose():
 
             # Bring up only what changed, remove orphans
             subprocess.run([
-                "docker-compose", "-f", patched_file, "up", "-d", "--remove-orphans"
+                "docker-compose", "-f", patched_file, "up", "-d"
             ], check=True)
 
             logging.info("✅ Compose update applied successfully.")
