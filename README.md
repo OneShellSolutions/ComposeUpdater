@@ -16,6 +16,7 @@ The application is designed to be run in a Docker container with the ability to 
 
    - The application checks the GitHub repository for changes every 20 seconds.
    - If a new `docker-compose.yml` file is detected, it pulls the latest images and applies the Docker Compose changes without recreating unchanged containers.
+   - 
 
 2. **Health Check API**:
 
